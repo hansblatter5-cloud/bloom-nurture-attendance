@@ -1,4 +1,6 @@
 Bloom & Nurture — Attendance Management System
+
+
 Welcome to the Bloom & Nurture Attendance Management System, a real-time tracking and analytics portal designed for maternal care shops and retail environments.
 
 This repository houses the frontend and management interface for monitoring daily staff check-ins, tracking punctuality thresholds, managing employee directories, and exporting operational compliance reports.
