@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bloom & Nurture — Attendance Management System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- QRCode.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <!-- HTML5 QR Code Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            forest: {
+              DEFAULT: '#0E3436',
+              light: '#133E40',
+              deep: '#092324',
+              surface: '#1A4A4C'
+            },
+            mint: {
+              DEFAULT: '#38B27A',
+              light: '#4ADE80',
+              dark: '#2E9364',
+              soft: '#E8F7F0'
+            },
+            canvas: '#F4F6F5',
+            blush: {
+              DEFAULT: '#FDF7F5',
+              accent: '#E8C5B8'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+            body: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #F4F6F5; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    /* Glassmorphism Styles */
+    .glass-card {
+      background: rgba(14, 52, 54, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    
+    .glass-card-light {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    /* Soft Maternity Background Texture Blending */
+    .maternity-bg-pattern {
+      background-color: #F4F6F5;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 178, 122, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(14, 52, 54, 0.06) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(232, 197, 184, 0.15) 0px, transparent 70%);
+    }
+
+    /* Circular Timer Animation */
+    .timer-svg circle {
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    /* Print styling for manager reports */
+    @media print {
+      body * { visibility: hidden; }
+      #printable-report, #printable-report * { visibility: visible; }
+      #printable-report { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 bg-canvas min-h-screen antialiased flex flex-col selection:bg-mint selection:text-white">
+
+  <!-- ================= TOP DEMO / ROLE SWITCHER NAV (STICKY) ================= -->
+  <div id="demo-nav" class="bg-forest-deep text-white px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 border-b border-forest-light/40 z-50">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-mint/20 text-mint-light">
+        <i data-lucide="sparkles" class="w-3 h-3 mr-1"></i> Standalone Demo Mode
+      </span>
+      <span class="hidden md:inline text-slate-300">Bloom & Nurture Attendance Portal</span>
+    </div>
+    
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-slate-400">Quick Test Switch:</span>
+      <button onclick="quickLogin('malkia24@gmail.com')" class="px-2.5 py-1 rounded bg-forest-surface hover:bg-forest text-slate-200 hover:text-white transition flex items-center gap-1 border border-white/10">
+        <i data-lucide="shield-check" class="w-3 h-3 text-mint-light"></i> Manager (Hans Blatter)
+      </button>
+      <button onclick="quickLogin('amara@bloomnurture.com')" class="px-2.5 py-1 rounded bg-forest-surface hover:bg-forest text-slate-200 hover:text-white transition flex items-center gap-1 border border-white/10">
+        <i data-lucide="user-check" class="w-3 h-3 text-emerald-300"></i> Worker (Amara - Approved)
+      </button>
+      <button onclick="quickLogin('chloe@bloomcare.co')" class="px-2.5 py-1 rounded bg-forest-surface hover:bg-forest text-slate-200 hover:text-white transition flex items-center gap-1 border border-white/10">
+        <i data-lucide="clock" class="w-3 h-3 text-amber-300"></i> Worker (Chloe - Pending)
+      </button>
+      <button id="btn-kiosk-nav" onclick="switchView('kiosk')" class="px-2.5 py-1 rounded bg-mint hover:bg-mint-dark text-white font-medium transition flex items-center gap-1 shadow-sm">
+        <i data-lucide="qr-code" class="w-3 h-3"></i> Entrance Kiosk
+      </button>
+      <button onclick="resetDemoData()" title="Reset Local Data" class="px-2 py-1 rounded bg-rose-900/40 hover:bg-rose-800 text-rose-200 transition text-[11px] ml-1">
+        <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed top-12 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- MAIN APP CONTENT CONTAINERS -->
+  <div class="flex-1 flex flex-col relative overflow-x-hidden">
+
+    <!-- ================= 1. AUTHENTICATION VIEW (LOGIN & SIGN UP) ================= -->
+    <section id="view-auth" class="min-h-[calc(100vh-36px)] flex items-center justify-center p-4 md:p-8 relative bg-forest-deep overflow-hidden">
+      
+      <!-- Background Blending Layers -->
+      <div class="absolute inset-0 z-0">
+        <!-- SVG Maternal Silhouette Motif Art (Inspired by Image 2) -->
+        <svg class="absolute -right-20 -bottom-20 w-[600px] h-[600px] text-forest-surface/30 pointer-events-none" viewBox="0 0 400 400" fill="currentColor">
+          <path d="M200 40 C 130 40, 80 90, 80 160 C 80 210, 110 250, 140 280 C 170 310, 180 340, 180 370 L 220 370 C 220 330, 240 300, 270 270 C 300 240, 320 200, 320 160 C 320 90, 270 40, 200 40 Z" />
+        </svg>
+        <div class="absolute inset-0 bg-gradient-to-tr from-forest-deep via-forest/90 to-forest-light/60"></div>
+        <div class="absolute top-10 left-10 w-72 h-72 bg-mint/10 rounded-full filter blur-3xl"></div>
+        <div class="absolute bottom-10 right-10 w-96 h-96 bg-blush-accent/10 rounded-full filter blur-3xl"></div>
+      </div>
+
+      <!-- Auth Modal Glass Card Container -->
+      <div class="relative z-10 w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden shadow-2xl border border-white/10 glass-card">
+        
+        <!-- Left Side: Aesthetic Brand Showcase (Image 2: image_5faa0f.jpg Integration & Image 4 Glassmorphism) -->
+        <div class="lg:col-span-5 relative p-8 flex flex-col justify-between overflow-hidden bg-forest-dark min-h-[420px]">
+          <!-- Background Silhouette Image Box (Image 2 - image_5faa0f.jpg) -->
+          <div class="absolute inset-0 z-0">
+            <img src="image_5faa0f.jpg" alt="Maternity Silhouette" 
+                 onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1555252333-9f8e92e65df9?q=80&w=800&auto=format&fit=crop';"
+                 class="w-full h-full object-cover object-top opacity-35 mix-blend-luminosity filter contrast-125" />
+            <div class="absolute inset-0 bg-gradient-to-t from-forest-deep via-forest/80 to-transparent"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-forest-deep/60 to-mint/10"></div>
+          </div>
+
+          <div class="relative z-10">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-10 h-10 rounded-xl bg-mint flex items-center justify-center text-forest-deep shadow-lg font-extrabold text-xl">
+                B
+              </div>
+              <div>
+                <h1 class="text-white font-bold text-lg leading-tight">Bloom & Nurture</h1>
+                <p class="text-mint-light text-xs font-medium">Pregnancy & Postpartum Support</p>
+              </div>
+            </div>
+
+            <div class="mt-8">
+              <span class="inline-block px-3 py-1 rounded-full text-xs bg-mint/20 text-mint-light font-semibold mb-3 border border-mint/30">
+                Daily Attendance System
+              </span>
+              <h2 class="text-2xl lg:text-3xl font-extrabold text-white leading-tight">
+                Empowering staff who care for mothers.
+              </h2>
+              <p class="text-slate-300 text-sm mt-3 leading-relaxed">
+                Seamless daily worker check-ins via dynamic Entrance Kiosk QR codes and instant PIN verification.
+              </p>
+            </div>
+          </div>
+
+          <!-- Bottom Quote Box -->
+          <div class="relative z-10 mt-8 pt-6 border-t border-white/10 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-mint/20 flex items-center justify-center text-mint-light shrink-0">
+              <i data-lucide="heart-handshake" class="w-4 h-4"></i>
+            </div>
+            <p class="text-xs text-slate-300 italic">"Dedicated to providing solution-based support from pregnancy to postpartum."</p>
+          </div>
+        </div>
+
+        <!-- Right Side: Authentication Forms (Login / Sign-Up Tabs - Image 4 Inspired Glassmorphic Box) -->
+        <div class="lg:col-span-7 p-8 md:p-10 bg-forest/90 flex flex-col justify-center">
+          
+          <!-- Mode Tabs Toggle -->
+          <div class="flex bg-forest-deep/80 p-1 rounded-2xl mb-8 border border-white/10 max-w-xs mx-auto w-full">
+            <button id="tab-btn-login" onclick="switchAuthTab('login')" class="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white bg-mint transition-all shadow-md">
+              Sign In
+            </button>
+            <button id="tab-btn-signup" onclick="switchAuthTab('signup')" class="flex-1 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all">
+              Employee Sign Up
+            </button>
+          </div>
+
+          <!-- LOGIN FORM -->
+          <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4 max-w-md mx-auto w-full">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Email or Employee No.</label>
+              <div class="relative">
+                <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-4 top-3.5"></i>
+                <input type="text" id="login-identifier" required placeholder="e.g. malkia24@gmail.com or EMP-101"
+                  class="w-full pl-11 pr-4 py-3 bg-forest-deep/60 border border-white/10 rounded-2xl text-white text-sm focus:outline-none focus:border-mint focus:ring-1 focus:ring-mint transition placeholder-slate-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Password</label>
+              <div class="relative">
+                <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-4 top-3.5"></i>
+                <input type="password" id="login-password" required placeholder="••••••••"
+                  class="w-full pl-11 pr-11 py-3 bg-forest-deep/60 border border-white/10 rounded-2xl text-white text-sm focus:outline-none focus:border-mint focus:ring-1 focus:ring-mint transition placeholder-slate-500">
+                <button type="button" onclick="togglePasswordVisibility('login-password', 'login-pass-icon')" class="absolute right-4 top-3.5 text-slate-400 hover:text-white transition focus:outline-none">
+                  <i data-lucide="eye" id="login-pass-icon" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-300 pt-1">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked class="rounded border-slate-600 bg-forest-deep text-mint focus:ring-mint">
+                <span>Remember me</span>
+              </label>
+              <a href="#" onclick="toast('Please contact Manager Hans Blatter to reset your credentials.', 'info')" class="text-mint-light hover:underline">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="w-full py-3.5 px-6 rounded-2xl bg-white text-forest-deep font-bold text-sm hover:bg-slate-100 transition shadow-lg hover:shadow-mint/20 flex items-center justify-center gap-2 mt-4">
+              <span>Sign In to Account</span>
+              <i data-lucide="arrow-right" class="w-4 h-4 text-forest"></i>
+            </button>
+
+            <!-- Quick Demo Credential Helper Box -->
+            <div class="mt-4 pt-3 border-t border-white/10 text-[11px] text-slate-400 flex flex-col gap-1.5">
+              <div class="font-semibold text-slate-300">Quick Test Credentials:</div>
+              <div class="flex items-center justify-between bg-forest-deep/80 px-2.5 py-1.5 rounded-xl border border-white/5">
+                <span>👑 Manager: <strong class="text-white">malkia24@gmail.com</strong></span>
+                <span class="font-mono text-mint-light">Yassah55577</span>
+              </div>
+              <div class="flex items-center justify-between bg-forest-deep/80 px-2.5 py-1.5 rounded-xl border border-white/5">
+                <span>✅ Staff (Approved): <strong class="text-white">amara@bloomnurture.com</strong></span>
+                <span class="font-mono text-emerald-300">worker123</span>
+              </div>
+              <div class="flex items-center justify-between bg-forest-deep/80 px-2.5 py-1.5 rounded-xl border border-white/5">
+                <span>⏳ Staff (Pending): <strong class="text-white">chloe@bloomcare.co</strong></span>
+                <span class="font-mono text-amber-300">pass123</span>
+              </div>
+            </div>
+          </form>
+
+          <!-- SIGN UP FORM (One-Time Employee Registration - Requires Manager Approval) -->
+          <form id="form-signup" onsubmit="handleSignUp(event)" class="space-y-3.5 max-w-md mx-auto w-full hidden">
+            <div class="p-3 bg-amber-500/15 border border-amber-500/30 rounded-2xl text-[11px] text-amber-200 flex items-start gap-2">
+              <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+              <span>Employee sign-ups require <strong>Manager Hans Blatter's approval</strong> before system access is granted.</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+                <input type="text" id="signup-fullname" required placeholder="Jane Doe"
+                  class="w-full px-4 py-2.5 bg-forest-deep/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-mint">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Employee No.</label>
+                <input type="text" id="signup-empno" required placeholder="EMP-106"
+                  class="w-full px-4 py-2.5 bg-forest-deep/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-mint">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+              <input type="email" id="signup-email" required placeholder="jane@bloomcare.co"
+                class="w-full px-4 py-2.5 bg-forest-deep/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-mint">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number</label>
+                <input type="tel" id="signup-phone" required placeholder="+1 (555) 019-283"
+                  class="w-full px-4 py-2.5 bg-forest-deep/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-mint">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Role / Department</label>
+                <select id="signup-role" required class="w-full px-3 py-2.5 bg-forest-deep border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-mint">
+                  <option value="Lactation Consultant">Lactation Consultant</option>
+                  <option value="Retail Specialist">Retail Specialist</option>
+                  <option value="Store Supervisor">Store Supervisor</option>
+                  <option value="Inventory & Fulfillment">Inventory & Fulfillment</option>
+                  <option value="Postpartum Advisor">Postpartum Advisor</option>
+                  <option value="Customer Care">Customer Care</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Create Password</label>
+              <div class="relative">
+                <input type="password" id="signup-password" required minlength="4" placeholder="••••••••"
+                  class="w-full px-4 pr-10 py-2.5 bg-forest-deep/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-mint">
+                <button type="button" onclick="togglePasswordVisibility('signup-password', 'signup-pass-icon')" class="absolute right-3 top-2.5 text-slate-400 hover:text-white transition focus:outline-none">
+                  <i data-lucide="eye" id="signup-pass-icon" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="w-full py-3 px-6 rounded-2xl bg-mint text-white font-bold text-xs hover:bg-mint-dark transition shadow-lg flex items-center justify-center gap-2 mt-4">
+              <i data-lucide="user-plus" class="w-4 h-4"></i>
+              <span>Submit Registration for Manager Approval</span>
+            </button>
+          </form>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================= 2. ENTRANCE KIOSK SCREEN (MODEL A) ================= -->
+    <section id="view-kiosk" class="min-h-[calc(100vh-36px)] bg-forest-deep text-white p-4 md:p-8 flex flex-col justify-between hidden relative overflow-hidden">
+      
+      <!-- Top Bar: Shop Header & Live Time -->
+      <div class="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-mint flex items-center justify-center text-forest-deep font-extrabold text-2xl shadow-lg">
+            B
+          </div>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white">Bloom & Nurture</h1>
+            <p class="text-xs text-mint-light">Main Shop Entrance Kiosk — Daily Attendance Terminal</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 bg-forest-light/60 px-5 py-2.5 rounded-2xl border border-white/10">
+          <i data-lucide="clock" class="w-5 h-5 text-mint-light"></i>
+          <div>
+            <div id="kiosk-live-time" class="text-lg font-mono font-bold leading-none text-white">00:00:00 AM</div>
+            <div id="kiosk-live-date" class="text-[11px] text-slate-300 mt-0.5">Thursday, Nov 12, 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Kiosk Display: Dual QR & PIN Terminal -->
+      <div class="relative z-10 max-w-4xl mx-auto w-full my-auto py-8">
+        <div class="text-center mb-6">
+          <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-mint/20 text-mint-light text-xs font-semibold uppercase tracking-wider mb-2 border border-mint/30">
+            <span class="w-2 h-2 rounded-full bg-mint animate-ping"></span> Live Rotating Challenge Token
+          </span>
+          <h2 class="text-2xl md:text-4xl font-extrabold text-white">Scan QR Code or Enter PIN to Check In</h2>
+          <p class="text-slate-300 text-sm mt-1">Codes dynamically refresh every 45 seconds to prevent remote clocking.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          
+          <!-- Box 1: Dynamic QR Code Box -->
+          <div class="bg-forest/80 backdrop-blur-xl border border-white/15 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl relative">
+            <div class="text-xs font-semibold text-slate-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <i data-lucide="qr-code" class="w-4 h-4 text-mint"></i> Option 1: Mobile Camera Scan
+            </div>
+            
+            <!-- QR Container -->
+            <div class="bg-white p-4 rounded-2xl shadow-inner relative flex items-center justify-center w-64 h-64 border-4 border-mint">
+              <div id="kiosk-qrcode-container"></div>
+            </div>
+
+            <p class="text-xs text-slate-400 mt-4">Point smartphone camera at screen to scan</p>
+          </div>
+
+          <!-- Box 2: Bold 6-Digit PIN & Countdown Timer -->
+          <div class="bg-forest/80 backdrop-blur-xl border border-white/15 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl">
+            <div class="text-xs font-semibold text-slate-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <i data-lucide="keypad" class="w-4 h-4 text-mint"></i> Option 2: 6-Digit Entrance PIN
+            </div>
+
+            <!-- PIN Display Box -->
+            <div class="w-full bg-forest-deep/90 border-2 border-mint/40 py-5 rounded-2xl mb-6 shadow-inner">
+              <div id="kiosk-pin-display" class="font-mono text-4xl md:text-5xl font-extrabold tracking-[0.25em] text-mint text-center">
+                ------
+              </div>
+            </div>
+
+            <!-- Circular Countdown Progress -->
+            <div class="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
+              <div class="relative w-10 h-10 flex items-center justify-center">
+                <svg class="w-10 h-10 transform -rotate-90">
+                  <circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" class="text-forest-light" fill="transparent" />
+                  <circle id="timer-circle" cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" class="text-mint timer-svg" fill="transparent" stroke-dasharray="100" stroke-dashoffset="0" />
+                </svg>
+                <span id="kiosk-countdown-num" class="absolute text-xs font-bold text-white">45</span>
+              </div>
+              <div class="text-left">
+                <div class="text-xs font-semibold text-white">Auto-Refreshing Token</div>
+                <div class="text-[11px] text-slate-400">Valid for current shift window</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single-Device Helper Toolbar -->
+        <div class="mt-8 p-4 bg-forest-light/40 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-2 text-xs text-slate-300">
+            <i data-lucide="info" class="w-4 h-4 text-mint-light"></i>
+            <span>Testing on a single device? Click to copy or test active token directly:</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="copyKioskToken()" class="px-3 py-1.5 rounded-xl bg-forest-surface hover:bg-forest text-xs font-semibold text-white border border-white/10 transition flex items-center gap-1.5">
+              <i data-lucide="copy" class="w-3.5 h-3.5 text-mint-light"></i> Copy Active PIN
+            </button>
+            <button onclick="simulateWorkerScanFromKiosk()" class="px-3 py-1.5 rounded-xl bg-mint hover:bg-mint-dark text-xs font-bold text-white shadow-md transition flex items-center gap-1.5">
+              <i data-lucide="user-check" class="w-3.5 h-3.5"></i> Test Worker Check-In Now
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Info -->
+      <div class="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-white/10">
+        <div>Bloom & Nurture Maternity Care • Terminal #ENTRANCE-01</div>
+        <button onclick="switchView('app')" class="text-mint-light hover:underline flex items-center gap-1">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Exit Full Screen Kiosk
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ================= 3. MAIN DASHBOARD / APP LAYOUT (WORKER & MANAGER) ================= -->
+    <section id="view-app" class="flex-1 flex flex-col lg:flex-row min-h-[calc(100vh-36px)] hidden maternity-bg-pattern">
+      
+      <!-- SIDEBAR NAVIGATION (Inspired by Image 1 Bento Teal Layout) -->
+      <aside class="w-full lg:w-64 bg-forest text-white p-5 flex flex-col justify-between border-r border-forest-light shrink-0">
+        
+        <div>
+          <!-- Brand Logo Header -->
+          <div class="flex items-center gap-3 pb-6 border-b border-forest-light/60">
+            <div class="w-10 h-10 rounded-xl bg-mint flex items-center justify-center text-forest-deep font-extrabold text-xl shadow-md">
+              B
+            </div>
+            <div>
+              <h2 class="font-bold text-white text-base leading-tight">Bloom & Nurture</h2>
+              <span class="text-[11px] text-mint-light font-medium">Maternal Care Shop</span>
+            </div>
+          </div>
+
+          <!-- Navigation Links -->
+          <nav class="mt-6 space-y-1.5">
+            
+            <!-- Employee View Navigation (Always Visible) -->
+            <button id="nav-item-worker" onclick="switchTab('worker-portal')" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition bg-mint text-white shadow-md">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+              <span>My Daily Check-In</span>
+            </button>
+
+            <!-- Manager Only Navigation Items -->
+            <div id="manager-nav-group" class="pt-4 mt-4 border-t border-forest-light/40 space-y-1.5">
+              <div class="px-3 text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-2">Manager Control</div>
+              
+              <button id="nav-item-dashboard" onclick="switchTab('manager-dashboard')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-forest-light hover:text-white transition">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span>Live Analytics</span>
+              </button>
+
+              <button id="nav-item-directory" onclick="switchTab('manager-directory')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-forest-light hover:text-white transition">
+                <i data-lucide="users" class="w-4 h-4"></i>
+                <span>Employee Directory</span>
+              </button>
+
+              <button id="nav-item-reports" onclick="switchTab('manager-reports')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-forest-light hover:text-white transition">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>Monthly Reports</span>
+              </button>
+
+              <button onclick="switchView('kiosk')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-forest-light hover:text-white transition">
+                <i data-lucide="qr-code" class="w-4 h-4 text-mint-light"></i>
+                <span>Open Entrance Kiosk</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+
+        <!-- User Profile Card at Sidebar Bottom (Image 1 Style) -->
+        <div class="pt-4 border-t border-forest-light/60">
+          <div class="bg-forest-deep/80 p-3 rounded-2xl flex items-center justify-between border border-white/5">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <div id="user-avatar-badge" class="w-8 h-8 rounded-full bg-mint text-forest font-bold text-xs flex items-center justify-center shrink-0">
+                SD
+              </div>
+              <div class="truncate">
+                <div id="user-display-name" class="text-xs font-bold text-white truncate">Sarah Jenkins</div>
+                <div id="user-display-role" class="text-[10px] text-slate-300 truncate">Lactation Consultant</div>
+              </div>
+            </div>
+            <button onclick="handleLogout()" title="Sign Out" class="p-1.5 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 rounded-lg transition">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- MAIN CONTENT PANEL -->
+      <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+
+        <!-- ================= TAB 1: WORKER DAILY CHECK-IN PORTAL ================= -->
+        <div id="tab-worker-portal" class="max-w-4xl mx-auto space-y-6">
+          
+          <!-- Banner Header -->
+          <div class="bg-gradient-to-r from-forest to-forest-light rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 border border-white/10">
+            <div class="relative z-10">
+              <span id="worker-welcome-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-mint/20 text-mint-light mb-2 inline-block border border-mint/30">
+                Active Shift Portal
+              </span>
+              <h2 id="worker-greeting" class="text-2xl md:text-3xl font-extrabold text-white">Welcome back!</h2>
+              <p class="text-slate-300 text-xs md:text-sm mt-1">Please verify your daily attendance at the shop entrance kiosk.</p>
+            </div>
+
+            <!-- Current Status Pill -->
+            <div class="relative z-10 bg-white/10 backdrop-blur-md px-5 py-4 rounded-2xl border border-white/10 text-center shrink-0">
+              <div class="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Today's Status</div>
+              <div id="worker-today-status-badge" class="text-base font-bold text-amber-300 mt-1 flex items-center justify-center gap-1.5">
+                <i data-lucide="clock" class="w-4 h-4"></i> Not Checked In Yet
+              </div>
+            </div>
+          </div>
+
+          <!-- Personal Attendance Performance Stats (Personal Isolation) -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-forest-surface text-mint-light flex items-center justify-center shrink-0">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-400 font-semibold">My Total Days Worked</div>
+                <div id="worker-stat-days" class="text-xl font-extrabold text-slate-900">0</div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-400 font-semibold">On-Time Compliance</div>
+                <div id="worker-stat-ontime-pct" class="text-xl font-extrabold text-emerald-600">0%</div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-400 font-semibold">Late Incidents</div>
+                <div id="worker-stat-late" class="text-xl font-extrabold text-amber-600">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Maternal Solution & Product Showcase Card (Image 3: image_5fa596.jpg Integration) -->
+          <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 flex flex-col sm:flex-row items-center gap-5">
+            <div class="w-full sm:w-36 h-28 rounded-2xl overflow-hidden bg-slate-100 shrink-0 relative border border-slate-200">
+              <img src="image_5fa596.jpg" alt="Postpartum Nursing Bra Care Solution"
+                   onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=400&auto=format&fit=crop';"
+                   class="w-full h-full object-cover" />
+              <span class="absolute bottom-1 right-1 bg-forest/80 text-mint text-[9px] font-bold px-1.5 py-0.5 rounded">Store Product</span>
+            </div>
+            <div class="flex-1 text-center sm:text-left">
+              <span class="text-[10px] font-bold text-mint-dark uppercase tracking-wider bg-mint-soft px-2.5 py-0.5 rounded-full inline-block mb-1">
+                Product & Support Solution
+              </span>
+              <h4 class="text-sm font-bold text-slate-800">Postpartum Comfort & Nursing Essentials</h4>
+              <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                Ensure shop inventory for our signature maternity apparel and postpartum support kits is updated during check-in.
+              </p>
+            </div>
+          </div>
+
+          <!-- Dual Check-In Interface (Model A) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Method 1: QR Scanner Card -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div class="w-10 h-10 rounded-2xl bg-mint-soft text-mint-dark flex items-center justify-center">
+                    <i data-lucide="qr-code" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[11px] font-semibold text-slate-400">Method A</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Scan Entrance QR Code</h3>
+                <p class="text-xs text-slate-500 mt-1">Point your phone camera at the active Entrance Kiosk screen.</p>
+              </div>
+
+              <!-- Camera QR Scanner Container / Trigger -->
+              <div class="mt-6 space-y-3">
+                <div id="qr-reader-container" class="hidden overflow-hidden rounded-2xl border border-slate-200"></div>
+                
+                <button id="btn-start-scanner" onclick="startCameraScanner()" class="w-full py-3 px-4 rounded-2xl bg-forest text-white font-semibold text-xs hover:bg-forest-light transition flex items-center justify-center gap-2 shadow-sm">
+                  <i data-lucide="camera" class="w-4 h-4 text-mint-light"></i> Open Camera Scanner
+                </button>
+
+                <button onclick="autoFillActiveKioskToken()" class="w-full py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition flex items-center justify-center gap-2">
+                  <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600"></i> Auto-Fetch Active Kiosk QR (Desktop Test)
+                </button>
+              </div>
+            </div>
+
+            <!-- Method 2: 6-Digit PIN Keypad Card -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div class="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                    <i data-lucide="keypad" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[11px] font-semibold text-slate-400">Method B</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Enter 6-Digit Kiosk PIN</h3>
+                <p class="text-xs text-slate-500 mt-1">Type the 6-digit number shown on the shop kiosk terminal.</p>
+              </div>
+
+              <form onsubmit="handlePinSubmit(event)" class="mt-6 space-y-4">
+                <div>
+                  <input type="text" id="worker-pin-input" maxlength="6" pattern="[0-9]*" placeholder="• • • • • •" required
+                    class="w-full py-3 px-4 text-center font-mono text-2xl font-bold tracking-[0.3em] bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-mint focus:bg-white transition">
+                </div>
+
+                <button type="submit" class="w-full py-3 px-4 rounded-2xl bg-mint text-white font-bold text-xs hover:bg-mint-dark transition shadow-md flex items-center justify-center gap-2">
+                  <i data-lucide="check-circle" class="w-4 h-4"></i> Submit PIN & Mark Attendance
+                </button>
+              </form>
+            </div>
+
+          </div>
+
+          <!-- Active Shift Action Box (Check Out Button if Checked In) -->
+          <div id="worker-checkout-card" class="bg-emerald-50 border border-emerald-200 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 hidden">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-mint text-white flex items-center justify-center">
+                <i data-lucide="check" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="text-sm font-bold text-slate-800">Shift Currently Active</div>
+                <div id="worker-checkin-timestamp-text" class="text-xs text-slate-600">Checked in today at 08:45 AM via QR Scan</div>
+              </div>
+            </div>
+            <button onclick="handleCheckOut()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-sm flex items-center gap-2">
+              <i data-lucide="log-out" class="w-4 h-4"></i> Clock Out for Today
+            </button>
+          </div>
+
+          <!-- Personal Attendance History Table -->
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                <i data-lucide="history" class="w-4 h-4 text-mint"></i> My Recent Attendance History
+              </h3>
+              <span class="text-xs text-slate-400">Past 30 Days</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-100 uppercase text-[10px] tracking-wider font-semibold">
+                    <th class="pb-3 font-semibold">Date</th>
+                    <th class="pb-3 font-semibold">Check In</th>
+                    <th class="pb-3 font-semibold">Check Out</th>
+                    <th class="pb-3 font-semibold">Verification Method</th>
+                    <th class="pb-3 font-semibold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="worker-history-tbody" class="divide-y divide-slate-100 text-slate-600 font-medium">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ================= TAB 2: MANAGER BENTO DASHBOARD (RESTRICTED) ================= -->
+        <div id="tab-manager-dashboard" class="space-y-6 hidden">
+          
+          <!-- Manager Dashboard Header -->
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-slate-900">Attendance Analytics & Live Monitor</h2>
+              <p class="text-xs text-slate-500 mt-1">Real-time daily worker tracking for Bloom & Nurture Maternity Store.</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+              <button onclick="switchTab('manager-reports')" class="px-4 py-2.5 rounded-2xl bg-forest text-white font-semibold text-xs hover:bg-forest-light transition flex items-center gap-2 shadow-sm">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-mint-light"></i> Export Monthly Report
+              </button>
+            </div>
+          </div>
+
+          <!-- KPI Bento Cards (Inspired by Image 1) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- Card 1: Present Today -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">Staff Present Today</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <i data-lucide="user-check" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div id="kpi-present-count" class="text-3xl font-extrabold text-slate-900">0 / 0</div>
+                <div class="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                  <i data-lucide="trending-up" class="w-3 h-3"></i> <span id="kpi-present-pct">0%</span> of workforce active
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: On-Time Rate -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">On-Time Arrival Rate</span>
+                <div class="w-8 h-8 rounded-xl bg-mint-soft text-mint-dark flex items-center justify-center">
+                  <i data-lucide="clock" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div id="kpi-ontime-rate" class="text-3xl font-extrabold text-slate-900">0%</div>
+                <div class="text-[11px] text-slate-500 mt-1">Cutoff shift threshold: 09:00 AM</div>
+              </div>
+            </div>
+
+            <!-- Card 3: Late Arrivals -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">Late Arrivals</span>
+                <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div id="kpi-late-count" class="text-3xl font-extrabold text-amber-600">0</div>
+                <div class="text-[11px] text-slate-500 mt-1">Checked in past 09:00 AM</div>
+              </div>
+            </div>
+
+            <!-- Card 4: Total Staff -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">Total Registered Staff</span>
+                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                  <i data-lucide="users" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div id="kpi-total-staff" class="text-3xl font-extrabold text-slate-900">0</div>
+                <div class="text-[11px] text-slate-500 mt-1">Across 5 departments</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Live Attendance Log Table (Search & Filter) -->
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="font-bold text-slate-800 text-base">Live Attendance Activity Logs</h3>
+                <p class="text-xs text-slate-400">Real-time check-ins and check-outs across all employees.</p>
+              </div>
+
+              <!-- Search & Filters -->
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="relative">
+                  <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                  <input type="text" id="manager-search-input" oninput="renderManagerLogTable()" placeholder="Search employee..."
+                    class="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-mint w-48">
+                </div>
+
+                <select id="manager-filter-status" onchange="renderManagerLogTable()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-mint">
+                  <option value="ALL">All Statuses</option>
+                  <option value="On Time">On Time</option>
+                  <option value="Late">Late</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-100 uppercase text-[10px] tracking-wider font-semibold">
+                    <th class="pb-3 font-semibold">Employee</th>
+                    <th class="pb-3 font-semibold">Role</th>
+                    <th class="pb-3 font-semibold">Date</th>
+        <!-- ================= TAB 3: EMPLOYEE DIRECTORY & ACCESS CONTROL (MANAGER ONLY) ================= -->
+        <div id="tab-manager-directory" class="space-y-6 hidden">
+          <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-slate-900">Staff Access & Approvals Management</h2>
+              <p class="text-xs text-slate-500 mt-1">Review pending employee registrations and manage active user access (Hans Blatter Admin Controls).</p>
+            </div>
+          </div>
+
+          <!-- Section 1: Pending Approval Requests -->
+          <div class="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6">
+            <h3 class="text-base font-extrabold text-amber-900 flex items-center gap-2 mb-1">
+              <i data-lucide="user-plus" class="w-5 h-5 text-amber-600"></i> Pending Approval Requests
+            </h3>
+            <p class="text-xs text-amber-800/80 mb-4">Newly registered employees awaiting manager authorization to access the system.</p>
+
+            <div id="pending-approval-container" class="space-y-3">
+              <!-- Rendered JS -->
+            </div>
+          </div>
+
+          <!-- Section 2: Active & Revoked Staff Directory -->
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            <h3 class="font-bold text-slate-800 text-base mb-4 flex items-center gap-2">
+              <i data-lucide="users" class="w-4 h-4 text-mint"></i> Registered Employee Roster
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="directory-grid">
+              <!-- JS Rendered Cards -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB 4: MONTHLY & CUSTOM REPORT GENERATOR ================= -->
+        <div id="tab-manager-reports" class="space-y-6 hidden">
+          
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            <h2 class="text-xl font-extrabold text-slate-900">Attendance Report Generator</h2>
+            <p class="text-xs text-slate-500 mt-1">Generate comprehensive monthly summaries or filter by custom date range for payroll export.</p>
+
+            <form onsubmit="generateReport(event)" class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Select Month</label>
+                <input type="month" id="report-month-select" value="2026-11" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-mint">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Filter by Department/Role</label>
+                <select id="report-role-filter" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-mint">
+                  <option value="ALL">All Roles</option>
+                  <option value="Lactation Consultant">Lactation Consultant</option>
+                  <option value="Retail Specialist">Retail Specialist</option>
+                  <option value="Store Supervisor">Store Supervisor</option>
+                  <option value="Inventory & Fulfillment">Inventory & Fulfillment</option>
+                  <option value="Customer Care">Customer Care</option>
+                </select>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button type="submit" class="flex-1 py-2.5 px-4 bg-forest hover:bg-forest-light text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+                  <i data-lucide="filter" class="w-4 h-4 text-mint-light"></i> Generate Summary
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Printable & Downloadable Report Output Sheet -->
+          <div id="printable-report" class="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 hidden space-y-6">
+            
+            <!-- Report Header -->
+            <div class="flex items-center justify-between border-b border-slate-200 pb-6">
+              <div>
+                <div class="flex items-center gap-2 text-forest font-extrabold text-xl">
+                  <div class="w-7 h-7 rounded-lg bg-mint text-white flex items-center justify-center text-sm">B</div>
+                  Bloom & Nurture — Attendance Statement
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Official Monthly Employee Work Record</p>
+              </div>
+              <div class="text-right">
+                <span id="report-period-label" class="inline-block px-3 py-1 rounded-full text-xs bg-slate-100 font-bold text-slate-700">November 2026</span>
+                <div class="text-[11px] text-slate-400 mt-1">Generated on Nov 12, 2026</div>
+              </div>
+            </div>
+
+            <!-- Report Summary Cards -->
+            <div class="grid grid-cols-3 gap-4 text-center">
+              <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div class="text-xs text-slate-500 font-medium">Total Shifts Logged</div>
+                <div id="rep-summary-shifts" class="text-xl font-bold text-slate-800 mt-1">0</div>
+              </div>
+              <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <div class="text-xs text-emerald-700 font-medium">On-Time Compliance</div>
+                <div id="rep-summary-ontime" class="text-xl font-bold text-emerald-800 mt-1">0%</div>
+              </div>
+              <div class="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <div class="text-xs text-amber-700 font-medium">Late Incidents</div>
+                <div id="rep-summary-late" class="text-xl font-bold text-amber-800 mt-1">0</div>
+              </div>
+            </div>
+
+            <!-- Report Detail Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-y border-slate-200">
+                    <th class="py-3 px-3">Emp No</th>
+                    <th class="py-3 px-3">Name</th>
+                    <th class="py-3 px-3">Role</th>
+                    <th class="py-3 px-3 text-center">Days Worked</th>
+                    <th class="py-3 px-3 text-center">On-Time %</th>
+                    <th class="py-3 px-3 text-center">Late Count</th>
+                    <th class="py-3 px-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="report-tbody" class="divide-y divide-slate-100 text-slate-700">
+                  <!-- Rendered JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Actions Row (No Print) -->
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3 no-print">
+              <button onclick="downloadCSVReport()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Download CSV File
+              </button>
+              <button onclick="window.print()" class="px-4 py-2 bg-forest hover:bg-forest-light text-white rounded-xl text-xs font-bold transition flex items-center gap-2">
+                <i data-lucide="printer" class="w-4 h-4"></i> Print Official PDF
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
+    </section>
+
+  </div>
+
+  <!-- ================= APP JAVASCRIPT ENGINE ================= -->
+  <script>
+    /* -------------------------------------------------------------------------- */
+    /* 1. APP STATE & INITIAL PRE-SEEDED DATA                                    */
+    /* -------------------------------------------------------------------------- */
+    const STORAGE_KEY_USERS = 'bloom_users_v2';
+    const STORAGE_KEY_LOGS = 'bloom_logs_v2';
+
+    // Primary Manager: Hans Blatter (malkia24@gmail.com / Yassah55577)
+    const DEFAULT_USERS = [
+      { id: 'u1', name: 'Hans Blatter', email: 'malkia24@gmail.com', phone: '+1 555-019-00', empNo: 'MGR-001', role: 'Store Manager', isManager: true, password: 'Yassah55577', status: 'approved' },
+      { id: 'u2', name: 'Amara Okafor', email: 'amara@bloomnurture.com', phone: '+1 555-014-22', empNo: 'EMP-101', role: 'Lactation Consultant', isManager: false, password: 'worker123', status: 'approved' },
+      { id: 'u3', name: 'Maya Lin', email: 'maya@bloomcare.co', phone: '+1 555-014-33', empNo: 'EMP-102', role: 'Retail Specialist', isManager: false, password: 'pass123', status: 'approved' },
+      { id: 'u4', name: 'Elena Rostova', email: 'elena@bloomcare.co', phone: '+1 555-014-44', empNo: 'EMP-103', role: 'Store Supervisor', isManager: false, password: 'pass123', status: 'approved' },
+      { id: 'u5', name: 'Chloe Bennett', email: 'chloe@bloomcare.co', phone: '+1 555-014-55', empNo: 'EMP-104', role: 'Customer Care', isManager: false, password: 'pass123', status: 'pending' },
+      { id: 'u6', name: 'Sarah Jenkins', email: 'sarah@bloomcare.co', phone: '+1 555-014-66', empNo: 'EMP-105', role: 'Inventory & Fulfillment', isManager: false, password: 'pass123', status: 'revoked' }
+    ];
+
+    function generateSeedLogs() {
+      const logs = [];
+      const staffList = DEFAULT_USERS.filter(u => !u.isManager && u.status === 'approved');
+      const baseDate = new Date(2026, 10, 12);
+
+      for (let i = 0; i < 20; i++) {
+        const dateObj = new Date(baseDate);
+        dateObj.setDate(baseDate.getDate() - i);
+        const dateStr = dateObj.toISOString().split('T')[0];
+
+        staffList.forEach(user => {
+          if (Math.random() > 0.15) {
+            const isLate = Math.random() < 0.2;
+            const checkInHour = isLate ? 9 : 8;
+            const checkInMin = isLate ? Math.floor(Math.random() * 25) + 5 : Math.floor(Math.random() * 45) + 10;
+            const checkInTime = `${String(checkInHour).padStart(2, '0')}:${String(checkInMin).padStart(2, '0')} AM`;
+            
+            logs.push({
+              id: 'log_' + Math.random().toString(36).substr(2, 9),
+              userId: user.id,
+              userName: user.name,
+              userEmpNo: user.empNo,
+              userRole: user.role,
+              date: dateStr,
+              checkInTime: checkInTime,
+              checkOutTime: '05:00 PM',
+              method: Math.random() > 0.4 ? 'QR Scan' : '6-Digit PIN',
+              status: isLate ? 'Late' : 'On Time'
+            });
+          }
+        });
+      }
+      return logs;
+    }
+
+    let users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS)) || DEFAULT_USERS;
+    let logs = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGS)) || generateSeedLogs();
+    let currentUser = null;
+    let kioskTimerInterval = null;
+    let currentKioskData = { pin: '', qrToken: '', windowId: 0 };
+    let html5QrScanner = null;
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+      localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logs));
+    }
+
+    function resetDemoData() {
+      localStorage.removeItem(STORAGE_KEY_USERS);
+      localStorage.removeItem(STORAGE_KEY_LOGS);
+      users = DEFAULT_USERS;
+      logs = generateSeedLogs();
+      saveState();
+      toast('Demo data reset to fresh state!', 'success');
+      setTimeout(() => location.reload(), 600);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* PASSWORD VISIBILITY TOGGLE                                                  */
+    /* -------------------------------------------------------------------------- */
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (!input) return;
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        if (icon) icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* TOTP MODEL A ALGORITHM                                                      */
+    /* -------------------------------------------------------------------------- */
+    function getWindowId(timestamp = Date.now()) {
+      return Math.floor(timestamp / 45000);
+    }
+
+    function generateKioskToken(windowId) {
+      const secret = "BLOOM_NURTURE_MATERNITY_2026";
+      let hash = 0;
+      const str = secret + "_" + windowId;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      const posHash = Math.abs(hash);
+      const pin = String(posHash % 1000000).padStart(6, '0');
+      const qrToken = `BN-KIOSK-${windowId}-${pin}`;
+      return { windowId, pin, qrToken };
+    }
+
+    function validateKioskEntry(input) {
+      const currentWin = getWindowId();
+      const prevWin = currentWin - 1;
+      
+      const currData = generateKioskToken(currentWin);
+      const prevData = generateKioskToken(prevWin);
+
+      const clean = String(input).trim();
+      if (clean === currData.pin || clean === currData.qrToken ||
+          clean === prevData.pin || clean === prevData.qrToken) {
+        return { valid: true, windowId: currentWin };
+      }
+      return { valid: false };
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* KIOSK RENDERER & TIMER CONTROLLER                                       */
+    /* -------------------------------------------------------------------------- */
+    let qrcodeObj = null;
+
+    function startKioskLoop() {
+      updateKioskDisplay();
+      if (kioskTimerInterval) clearInterval(kioskTimerInterval);
+
+      kioskTimerInterval = setInterval(() => {
+        const now = Date.now();
+        const secondsInWindow = Math.floor((now % 45000) / 1000);
+        const remaining = 45 - secondsInWindow;
+
+        const countEl = document.getElementById('kiosk-countdown-num');
+        if (countEl) countEl.innerText = remaining;
+
+        const circleEl = document.getElementById('timer-circle');
+        if (circleEl) {
+          const dashoffset = (remaining / 45) * 100;
+          circleEl.style.strokeDashoffset = 100 - dashoffset;
+        }
+
+        const timeEl = document.getElementById('kiosk-live-time');
+        if (timeEl) {
+          timeEl.innerText = new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        if (remaining === 45 || currentKioskData.windowId !== getWindowId()) {
+          updateKioskDisplay();
+        }
+      }, 1000);
+    }
+
+    function updateKioskDisplay() {
+      const winId = getWindowId();
+      currentKioskData = generateKioskToken(winId);
+
+      const pinEl = document.getElementById('kiosk-pin-display');
+      if (pinEl) pinEl.innerText = currentKioskData.pin;
+
+      const container = document.getElementById('kiosk-qrcode-container');
+      if (container) {
+        container.innerHTML = '';
+        qrcodeObj = new QRCode(container, {
+          text: currentKioskData.qrToken,
+          width: 220,
+          height: 220,
+          colorDark: "#0E3436",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+    }
+
+    function copyKioskToken() {
+      navigator.clipboard.writeText(currentKioskData.pin);
+      toast(`Copied PIN: ${currentKioskData.pin}`, 'success');
+    }
+
+    function simulateWorkerScanFromKiosk() {
+      if (!currentUser || currentUser.isManager) {
+        quickLogin('amara@bloomnurture.com');
+      }
+      switchView('app');
+      switchTab('worker-portal');
+      document.getElementById('worker-pin-input').value = currentKioskData.pin;
+      toast('Auto-filled active Kiosk PIN on worker screen!', 'info');
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* AUTHENTICATION & MANAGER APPROVAL WORKFLOW                                 */
+    /* -------------------------------------------------------------------------- */
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('form-login');
+      const signupForm = document.getElementById('form-signup');
+      const btnLogin = document.getElementById('tab-btn-login');
+      const btnSignup = document.getElementById('tab-btn-signup');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        btnLogin.className = "flex-1 py-2.5 rounded-xl text-xs font-semibold text-white bg-mint transition-all shadow-md";
+        btnSignup.className = "flex-1 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all";
+      } else {
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        btnSignup.className = "flex-1 py-2.5 rounded-xl text-xs font-semibold text-white bg-mint transition-all shadow-md";
+        btnLogin.className = "flex-1 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all";
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const idInput = document.getElementById('login-identifier').value.trim();
+      const passInput = document.getElementById('login-password').value.trim();
+
+      const user = users.find(u => 
+        (u.email.toLowerCase() === idInput.toLowerCase() || u.empNo.toLowerCase() === idInput.toLowerCase()) && 
+        u.password === passInput
+      );
+
+      if (!user) {
+        toast('Invalid Email/Employee No. or Password.', 'error');
+        return;
+      }
+
+      // STRICT MANAGER APPROVAL GATE
+      if (user.status === 'pending') {
+        toast('Access Denied: Your account is awaiting approval from Manager Hans Blatter.', 'error');
+        return;
+      }
+
+      if (user.status === 'revoked') {
+        toast('Access Revoked: Your system access has been removed by the Manager.', 'error');
+        return;
+      }
+
+      currentUser = user;
+      toast(`Welcome back, ${user.name}!`, 'success');
+      setupUserSession();
+    }
+
+    function handleSignUp(e) {
+      e.preventDefault();
+      const name = document.getElementById('signup-fullname').value.trim();
+      const empNo = document.getElementById('signup-empno').value.trim().toUpperCase();
+      const email = document.getElementById('signup-email').value.trim();
+      const phone = document.getElementById('signup-phone').value.trim();
+      const role = document.getElementById('signup-role').value;
+      const password = document.getElementById('signup-password').value.trim();
+
+      if (users.some(u => u.email.toLowerCase() === email.toLowerCase() || u.empNo === empNo)) {
+        toast('An employee with this Email or Employee No. already exists.', 'error');
+        return;
+      }
+
+      const newUser = {
+        id: 'u_' + Date.now(),
+        name, email, phone, empNo, role,
+        isManager: false,
+        password,
+        status: 'pending' // ALL NEW EMPLOYEES REQUIRE MANAGER APPROVAL
+      };
+
+      users.push(newUser);
+      saveState();
+      
+      toast('Registration submitted! Your account is pending Manager (Hans Blatter) approval.', 'info');
+      switchAuthTab('login');
+      document.getElementById('form-signup').reset();
+    }
+
+    function quickLogin(email) {
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (user) {
+        if (user.status === 'pending') {
+          toast(`Cannot login: ${user.name} is still pending Manager approval.`, 'error');
+          return;
+        }
+        if (user.status === 'revoked') {
+          toast(`Cannot login: Access for ${user.name} has been revoked.`, 'error');
+          return;
+        }
+        currentUser = user;
+        toast(`Logged in as ${user.name} (${user.role})`, 'info');
+        setupUserSession();
+      }
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      switchView('auth');
+      toast('Signed out successfully.', 'info');
+    }
+
+    function setupUserSession() {
+      switchView('app');
+      
+      const initials = currentUser.name.split(' ').map(n=>n[0]).join('').substring(0,2);
+      document.getElementById('user-avatar-badge').innerText = initials;
+      document.getElementById('user-display-name').innerText = currentUser.name;
+      document.getElementById('user-display-role').innerText = currentUser.role;
+
+      const mgrNavGroup = document.getElementById('manager-nav-group');
+      const btnKioskNav = document.getElementById('btn-kiosk-nav');
+
+      if (currentUser.isManager) {
+        mgrNavGroup.classList.remove('hidden');
+        if (btnKioskNav) btnKioskNav.classList.remove('hidden');
+        switchTab('manager-dashboard');
+      } else {
+        mgrNavGroup.classList.add('hidden');
+        if (btnKioskNav) btnKioskNav.classList.add('hidden');
+        switchTab('worker-portal');
+      }
+
+      renderWorkerPortal();
+      renderManagerDashboard();
+      renderDirectory();
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* WORKER PORTAL & PERSONAL ISOLATION                                         */
+    /* -------------------------------------------------------------------------- */
+    function renderWorkerPortal() {
+      if (!currentUser) return;
+
+      document.getElementById('worker-greeting').innerText = `Welcome back, ${currentUser.name}!`;
+      document.getElementById('worker-welcome-badge').innerText = `EMP NO: ${currentUser.empNo} • ${currentUser.role}`;
+
+      const userLogs = logs.filter(l => l.userId === currentUser.id).sort((a,b) => b.date.localeCompare(a.date));
+
+      // Calculate personal worker statistics
+      const totalWorked = userLogs.length;
+      const onTimeCount = userLogs.filter(l => l.status === 'On Time').length;
+      const lateCount = userLogs.filter(l => l.status === 'Late').length;
+      const onTimePct = totalWorked > 0 ? Math.round((onTimeCount / totalWorked) * 100) : 0;
+
+      document.getElementById('worker-stat-days').innerText = totalWorked;
+      document.getElementById('worker-stat-ontime-pct').innerText = `${onTimePct}%`;
+      document.getElementById('worker-stat-late').innerText = lateCount;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayLog = logs.find(l => l.userId === currentUser.id && l.date === todayStr);
+
+      const statusBadge = document.getElementById('worker-today-status-badge');
+      const checkoutCard = document.getElementById('worker-checkout-card');
+
+      if (todayLog) {
+        if (todayLog.checkOutTime && todayLog.checkOutTime !== '--') {
+          statusBadge.innerHTML = `<i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i> Completed (${todayLog.status})`;
+          checkoutCard.classList.add('hidden');
+        } else {
+          statusBadge.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-300"></i> Checked In (${todayLog.checkInTime})`;
+          checkoutCard.classList.remove('hidden');
+          document.getElementById('worker-checkin-timestamp-text').innerText = `Checked in today at ${todayLog.checkInTime} via ${todayLog.method}`;
+        }
+      } else {
+        statusBadge.innerHTML = `<i data-lucide="clock" class="w-4 h-4 text-amber-300"></i> Not Checked In`;
+        checkoutCard.classList.add('hidden');
+      }
+
+      // Render Personal History Table Only
+      const historyBody = document.getElementById('worker-history-tbody');
+      if (userLogs.length === 0) {
+        historyBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">No personal attendance history found.</td></tr>`;
+      } else {
+        historyBody.innerHTML = userLogs.map(l => `
+          <tr class="hover:bg-slate-50">
+            <td class="py-3 font-semibold text-slate-800">${l.date}</td>
+            <td class="py-3 text-slate-700">${l.checkInTime}</td>
+            <td class="py-3 text-slate-700">${l.checkOutTime || '--'}</td>
+            <td class="py-3 text-slate-500">${l.method}</td>
+            <td class="py-3 text-right">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${l.status === 'On Time' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${l.status}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      lucide.createIcons();
+    }
+
+    function processAttendanceCheckIn(inputMethod, tokenOrPin) {
+      const validation = validateKioskEntry(tokenOrPin);
+      if (!validation.valid) {
+        toast('Invalid or expired Kiosk code. Please check the active Entrance Screen.', 'error');
+        return;
+      }
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const existingLog = logs.find(l => l.userId === currentUser.id && l.date === todayStr);
+
+      if (existingLog) {
+        toast('You have already checked in for today!', 'info');
+        return;
+      }
+
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const checkInTimeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      const isLate = hours > 9 || (hours === 9 && minutes > 0);
+
+      const newLog = {
+        id: 'log_' + Date.now(),
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userEmpNo: currentUser.empNo,
+        userRole: currentUser.role,
+        date: todayStr,
+        checkInTime: checkInTimeString,
+        checkOutTime: null,
+        method: inputMethod,
+        status: isLate ? 'Late' : 'On Time'
+      };
+
+      logs.push(newLog);
+      saveState();
+      toast(`Success! Marked attendance as ${newLog.status} at ${checkInTimeString}`, 'success');
+      
+      renderWorkerPortal();
+      if (currentUser.isManager) renderManagerDashboard();
+    }
+
+    function handlePinSubmit(e) {
+      e.preventDefault();
+      const pin = document.getElementById('worker-pin-input').value.trim();
+      processAttendanceCheckIn('6-Digit PIN', pin);
+      document.getElementById('worker-pin-input').value = '';
+    }
+
+    function autoFillActiveKioskToken() {
+      processAttendanceCheckIn('QR Scan', currentKioskData.qrToken);
+    }
+
+    function handleCheckOut() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayLog = logs.find(l => l.userId === currentUser.id && l.date === todayStr);
+
+      if (todayLog) {
+        todayLog.checkOutTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        saveState();
+        toast('Shift completed. Checked out successfully!', 'success');
+        renderWorkerPortal();
+        if (currentUser.isManager) renderManagerDashboard();
+      }
+    }
+
+    function startCameraScanner() {
+      const container = document.getElementById('qr-reader-container');
+      container.classList.remove('hidden');
+
+      if (html5QrScanner) {
+        html5QrScanner.clear();
+      }
+
+      html5QrScanner = new Html5QrcodeScanner("qr-reader-container", { fps: 10, qrbox: 200 });
+      html5QrScanner.render((decodedText) => {
+        html5QrScanner.clear();
+        container.classList.add('hidden');
+        processAttendanceCheckIn('QR Scan', decodedText);
+      }, (error) => {});
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* MANAGER CONTROLLER & DIRECTORY APPROVAL WORKFLOW                           */
+    /* -------------------------------------------------------------------------- */
+    function renderManagerDashboard() {
+      if (!currentUser || !currentUser.isManager) return;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayLogs = logs.filter(l => l.date === todayStr);
+      const totalStaff = users.filter(u => !u.isManager && u.status === 'approved').length;
+
+      const presentCount = todayLogs.length;
+      const onTimeCount = todayLogs.filter(l => l.status === 'On Time').length;
+      const lateCount = todayLogs.filter(l => l.status === 'Late').length;
+
+      const presentPct = totalStaff > 0 ? Math.round((presentCount / totalStaff) * 100) : 0;
+      const onTimePct = presentCount > 0 ? Math.round((onTimeCount / presentCount) * 100) : 0;
+
+      document.getElementById('kpi-present-count').innerText = `${presentCount} / ${totalStaff}`;
+      document.getElementById('kpi-present-pct').innerText = `${presentPct}%`;
+      document.getElementById('kpi-ontime-rate').innerText = `${onTimePct}%`;
+      document.getElementById('kpi-late-count').innerText = lateCount;
+      document.getElementById('kpi-total-staff').innerText = totalStaff;
+
+      renderManagerLogTable();
+    }
+
+    function renderManagerLogTable() {
+      const search = (document.getElementById('manager-search-input')?.value || '').toLowerCase();
+      const statusFilter = document.getElementById('manager-filter-status')?.value || 'ALL';
+
+      let filtered = [...logs].sort((a,b) => b.date.localeCompare(a.date));
+
+      if (search) {
+        filtered = filtered.filter(l => l.userName.toLowerCase().includes(search) || l.userEmpNo.toLowerCase().includes(search));
+      }
+      if (statusFilter !== 'ALL') {
+        filtered = filtered.filter(l => l.status === statusFilter);
+      }
+
+      const tbody = document.getElementById('manager-logs-tbody');
+      if (!tbody) return;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No attendance logs matching search criteria.</td></tr>`;
+      } else {
+        tbody.innerHTML = filtered.slice(0, 50).map(l => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3.5 font-bold text-slate-800">
+              ${l.userName}
+              <div class="text-[10px] text-slate-400 font-normal">${l.userEmpNo}</div>
+            </td>
+            <td class="py-3.5 text-slate-600">${l.userRole}</td>
+            <td class="py-3.5 font-mono text-slate-600">${l.date}</td>
+            <td class="py-3.5 text-slate-800 font-semibold">${l.checkInTime}</td>
+            <td class="py-3.5 text-slate-600">${l.checkOutTime || '--'}</td>
+            <td class="py-3.5 text-slate-500">${l.method}</td>
+            <td class="py-3.5 text-right">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${l.status === 'On Time' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${l.status}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      lucide.createIcons();
+    }
+
+    function renderDirectory() {
+      if (!currentUser || !currentUser.isManager) return;
+
+      // 1. Pending Approvals Container
+      const pendingContainer = document.getElementById('pending-approval-container');
+      const pendingUsers = users.filter(u => u.status === 'pending');
+
+      if (pendingUsers.length === 0) {
+        pendingContainer.innerHTML = `<div class="p-4 bg-white/60 rounded-2xl text-xs text-amber-900/70 font-medium text-center border border-amber-500/10">No pending registration requests at this time.</div>`;
+      } else {
+        pendingContainer.innerHTML = pendingUsers.map(u => `
+          <div class="p-4 bg-white rounded-2xl border border-amber-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center">
+                ${u.name.split(' ').map(n=>n[0]).join('')}
+              </div>
+              <div>
+                <div class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                  ${u.name} <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">Pending Approval</span>
+                </div>
+                <div class="text-xs text-slate-500">${u.empNo} • ${u.role} • ${u.email} • ${u.phone}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="approveUser('${u.id}')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1 shadow-sm">
+                <i data-lucide="check" class="w-4 h-4"></i> Approve Access
+              </button>
+              <button onclick="rejectUser('${u.id}')" class="px-3.5 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-xs transition flex items-center gap-1">
+                <i data-lucide="x" class="w-4 h-4"></i> Reject
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 2. Active Roster Grid
+      const grid = document.getElementById('directory-grid');
+      const activeOrRevoked = users.filter(u => !u.isManager && u.status !== 'pending');
+
+      grid.innerHTML = activeOrRevoked.map(u => `
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-forest text-mint font-bold text-sm flex items-center justify-center">
+                  ${u.name.split(' ').map(n=>n[0]).join('')}
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-800 text-sm">${u.name}</h3>
+                  <span class="text-[11px] text-mint-dark font-semibold">${u.empNo}</span>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                ${u.status === 'approved' ? 'Active' : 'Revoked'}
+              </span>
+            </div>
+
+            <div class="space-y-1 text-xs text-slate-500">
+              <div><strong class="text-slate-700">Role:</strong> ${u.role}</div>
+              <div><strong class="text-slate-700">Email:</strong> ${u.email}</div>
+              <div><strong class="text-slate-700">Phone:</strong> ${u.phone}</div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+            ${u.status === 'approved' ? `
+              <button onclick="revokeUser('${u.id}')" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs transition flex items-center gap-1">
+                <i data-lucide="user-x" class="w-3.5 h-3.5"></i> Revoke Access
+              </button>
+            ` : `
+              <button onclick="approveUser('${u.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-semibold text-xs transition flex items-center gap-1">
+                <i data-lucide="user-check" class="w-3.5 h-3.5"></i> Restore Access
+              </button>
+            `}
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function approveUser(userId) {
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        user.status = 'approved';
+        saveState();
+        toast(`Access approved for ${user.name}!`, 'success');
+        renderDirectory();
+        renderManagerDashboard();
+      }
+    }
+
+    function rejectUser(userId) {
+      users = users.filter(u => u.id !== userId);
+      saveState();
+      toast('Registration request rejected.', 'info');
+      renderDirectory();
+    }
+
+    function revokeUser(userId) {
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        user.status = 'revoked';
+        saveState();
+        toast(`System access revoked for ${user.name}.`, 'info');
+        renderDirectory();
+        renderManagerDashboard();
+      }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* REPORT GENERATOR                                                           */
+    /* -------------------------------------------------------------------------- */
+    let activeReportData = [];
+
+    function generateReport(e) {
+      e.preventDefault();
+      if (!currentUser || !currentUser.isManager) return;
+
+      const monthVal = document.getElementById('report-month-select').value;
+      const roleVal = document.getElementById('report-role-filter').value;
+
+      const staff = users.filter(u => !u.isManager && u.status === 'approved' && (roleVal === 'ALL' || u.role === roleVal));
+      const reportLogs = logs.filter(l => l.date.startsWith(monthVal));
+
+      let totalShifts = 0;
+      let totalOnTime = 0;
+      let totalLate = 0;
+
+      const summaryRows = staff.map(emp => {
+        const empLogs = reportLogs.filter(l => l.userId === emp.id);
+        const daysWorked = empLogs.length;
+        const onTimeCount = empLogs.filter(l => l.status === 'On Time').length;
+        const lateCount = empLogs.filter(l => l.status === 'Late').length;
+        const onTimeRate = daysWorked > 0 ? Math.round((onTimeCount / daysWorked) * 100) : 0;
+
+        totalShifts += daysWorked;
+        totalOnTime += onTimeCount;
+        totalLate += lateCount;
+
+        return { empNo: emp.empNo, name: emp.name, role: emp.role, daysWorked, onTimeRate, lateCount };
+      });
+
+      activeReportData = summaryRows;
+
+      document.getElementById('printable-report').classList.remove('hidden');
+      document.getElementById('report-period-label').innerText = monthVal;
+      document.getElementById('rep-summary-shifts').innerText = totalShifts;
+      document.getElementById('rep-summary-ontime').innerText = (totalShifts > 0 ? Math.round((totalOnTime / totalShifts) * 100) : 0) + '%';
+      document.getElementById('rep-summary-late').innerText = totalLate;
+
+      const tbody = document.getElementById('report-tbody');
+      tbody.innerHTML = summaryRows.map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-3 px-3 font-mono font-bold text-slate-800">${r.empNo}</td>
+          <td class="py-3 px-3 font-semibold text-slate-800">${r.name}</td>
+          <td class="py-3 px-3 text-slate-600">${r.role}</td>
+          <td class="py-3 px-3 text-center font-bold">${r.daysWorked}</td>
+          <td class="py-3 px-3 text-center font-semibold text-emerald-600">${r.onTimeRate}%</td>
+          <td class="py-3 px-3 text-center font-semibold text-amber-600">${r.lateCount}</td>
+          <td class="py-3 px-3 text-right">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.onTimeRate >= 80 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+              ${r.onTimeRate >= 80 ? 'Good' : 'Needs Review'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+
+      toast('Monthly attendance report generated!', 'success');
+    }
+
+    function downloadCSVReport() {
+      if (activeReportData.length === 0) return;
+
+      let csvContent = "data:text/csv;charset=utf-8,Employee No,Name,Role,Days Worked,On Time Rate %,Late Count\n";
+      activeReportData.forEach(r => {
+        csvContent += `"${r.empNo}","${r.name}","${r.role}",${r.daysWorked},${r.onTimeRate}%,${r.lateCount}\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `BloomCare_Attendance_Report_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* STRICT VIEW & TAB SWITCHING (RBAC ISOLATION)                               */
+    /* -------------------------------------------------------------------------- */
+    function switchView(viewName) {
+      if (viewName === 'kiosk' && currentUser && !currentUser.isManager) {
+        toast('Access Restricted: Entrance Kiosk terminal is manager-only.', 'error');
+        return;
+      }
+
+      document.getElementById('view-auth').classList.add('hidden');
+      document.getElementById('view-kiosk').classList.add('hidden');
+      document.getElementById('view-app').classList.add('hidden');
+
+      if (viewName === 'auth') {
+        document.getElementById('view-auth').classList.remove('hidden');
+      } else if (viewName === 'kiosk') {
+        document.getElementById('view-kiosk').classList.remove('hidden');
+        startKioskLoop();
+      } else if (viewName === 'app') {
+        document.getElementById('view-app').classList.remove('hidden');
+      }
+    }
+
+    function switchTab(tabId) {
+      // ENFORCE RBAC ISOLATION: Non-managers can ONLY see worker-portal
+      if (currentUser && !currentUser.isManager && tabId !== 'worker-portal') {
+        toast('Access Restricted: Only Manager Hans Blatter can view company analytics & directory.', 'error');
+        tabId = 'worker-portal';
+      }
+
+      const tabs = ['worker-portal', 'manager-dashboard', 'manager-directory', 'manager-reports'];
+      tabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if (el) el.classList.add('hidden');
+
+        const navBtn = document.getElementById(`nav-item-${t.replace('manager-', '')}`);
+        if (navBtn) {
+          navBtn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-forest-light hover:text-white transition";
+        }
+      });
+
+      const activeEl = document.getElementById(`tab-${tabId}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      const activeNav = document.getElementById(`nav-item-${tabId.replace('manager-', '')}`);
+      if (activeNav) {
+        activeNav.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-mint text-white shadow-md transition";
+      }
+
+      if (tabId === 'manager-dashboard') renderManagerDashboard();
+      if (tabId === 'manager-directory') renderDirectory();
+      if (tabId === 'worker-portal') renderWorkerPortal();
+    }
+
+    function toast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toastEl = document.createElement('div');
+      
+      const bgClass = type === 'success' ? 'bg-emerald-600 text-white' : 
+                      type === 'error' ? 'bg-rose-600 text-white' : 'bg-forest-deep text-mint-light border border-mint/30';
+      
+      toastEl.className = `p-3.5 rounded-2xl shadow-xl text-xs font-medium flex items-center gap-2 pointer-events-auto transition-all transform translate-y-2 opacity-0 ${bgClass}`;
+      toastEl.innerHTML = `<i data-lucide="info" class="w-4 h-4 shrink-0"></i> <span>${message}</span>`;
+
+      container.appendChild(toastEl);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toastEl.classList.remove('translate-y-2', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toastEl.classList.add('opacity-0');
+        setTimeout(() => toastEl.remove(), 300);
+      }, 3500);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* INITIALIZATION                                                             */
+    /* -------------------------------------------------------------------------- */
+    window.onload = function() {
+      lucide.createIcons();
+      saveState();
+      switchView('auth');
+    };
+  </script>
+</body>
+</html>
